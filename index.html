@@ -6,161 +6,155 @@
   <meta name="keywords" content="socket.io online-chat">
   <meta name="description" content="在线聊天室">
   <meta name="author" content="Neil-YQ">
-	<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
-	<script>
-		document.getElementsByTagName("html")[0].style.fontSize = document.documentElement.clientWidth/10+"px";
-	</script>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <script>document.getElementsByTagName("html")[0].style.fontSize = document.documentElement.clientWidth/10+"px";</script>
   <style>
     body{font-family: "Microsoft YaHei",serif;}
     body,dl,dd,p,h1,h2,h3,h4,h5,h6{margin:0;}
     ol,ul,li{margin:0;padding:0;list-style:none;}
     img{border:none;}
-	</style>
-	<link rel="stylesheet" type="text/css" href="css/chat.css">
+  </style>
+  <link rel="stylesheet" type="text/css" href="css/chat.css">
 </head>
 <body>
-		<!-- login-box start -->
-		<div class="login-box">
-			<h3>Chat-Room v1.0</h3>
-			<div><input class="username" type="text" name="loginname" placeholder="请输入用户名！"></div>
-			<div id="login">enter</div>
-		</div>
-		<!-- login-box end -->
+  <!-- login-box start -->
+  <div class="login-box">
+    <h3>Chat-Room v1.0</h3>
+    <div><input class="username" type="text" name="loginname" placeholder="请输入用户名！"></div>
+    <div id="login">enter</div>
+  </div>
+  <!-- login-box end -->
 
-		<!-- chat-box start -->
-		<div class="chat-box">
+  <!-- chat-box start -->
+  <div class="chat-box">
+    <!-- message start -->
+    <div class="message">在线人数：<span class="online-count">0</span></div>
+    <!-- message end -->
 
-			<!-- message start -->
-			<div class="message">
-				在线人数：<span class="online-count">0</span>
-			</div>
-			<!-- message end -->
+    <!-- line-value start -->
+    <div class="view-box"></div>
+    <!-- line-value end -->
 
-			<!-- line-value start -->
-			<div class="view-box"></div>
-			<!-- line-value end -->
+    <!-- control-box start -->
+    <div class="control-box">
+	<div class="input-content"><iframe id="content" scrolling="no"></iframe></div>
+	<div id="send">发送</div>
+    </div>
+    <!-- control-box end -->
+  </div>
+  <!-- chat-box end -->
 
-			<!-- control-box start -->
-			<div class="control-box">
-				<div class="input-content"><iframe id="content" scrolling="no"></iframe></div>
-				<div id="send">发送</div>
-			</div>
-			<!-- control-box end -->
-			
-		</div>
-		<!-- chat-box end -->
+  <script src="js/socket.io.js"></script>
+  <script>
+    var iclick = false; 
+    var oBox = document.getElementsByClassName("login-box")[0],
+        loginBtn = document.querySelector("#login"),
+        oname = document.querySelector("input.username"),
+        iframe = document.getElementById("content"),
+        chatBox = document.getElementsByClassName("chat-box")[0],
+        onlineCount = document.getElementsByClassName('online-count')[0],
+        viewBox = document.getElementsByClassName('view-box')[0],
+        osend = document.getElementById('send')
+    ;
+    const doc = iframe.contentDocument;
+    doc.designMode = "on";
 
-		<script src="js/socket.io.js"></script>
-    <script>
-    	var iclick = false; 
-    	var oBox = document.getElementsByClassName("login-box")[0],
-    			loginBtn = document.querySelector("#login"),
-    			oname = document.querySelector("input.username"),
-  	      iframe = document.getElementById("content"),
-  	      chatBox = document.getElementsByClassName("chat-box")[0],
-  	      onlineCount = document.getElementsByClassName('online-count')[0],
-  	      viewBox = document.getElementsByClassName('view-box')[0],
-    			osend = document.getElementById('send')
-    	;
-    	const doc = iframe.contentDocument;
-    	doc.designMode = "on";
+    // 提示
+    function showMsg(str){
+      var msg = document.createElement("div");
+      msg.className = "showMsg";
+      msg.innerHTML = str || "测试？";
+      document.body.appendChild(msg);
+      setTimeout(function(){
+        document.body.removeChild(msg);
+        iclick = false;
+      }, 2000);
+    }
 
-    	// 提示
-    	function showMsg(str){
-    		var msg = document.createElement("div");
-    		msg.className = "showMsg";
-    		msg.innerHTML = str || "测试？";
-    		document.body.appendChild(msg);
-    		setTimeout(function(){
-    			document.body.removeChild(msg);
-    			iclick = false;
-    		}, 2000);
-    	}
+    // line-value
+    // msg     state-> 0:leave , 1:enter
+    function lineMsg(state, username){
+      var str = `
+        <div class="line-value">
+            <div class="msg"> - ${username} ${state?"enters":"leaves"} the chat room. - </div>
+        </div>`;
+      viewBox.innerHTML += str;
+    }
+    // userText 		state-> 0:right , 1:left
+    function lineUserText(state, username, text){
+      var strVal = state?"left":"right"; 
+      var oimg  = `<div class="img"><img src="images/1.jpg" width="40" height="40" alt="icon"></div>`;
+      var otext = `
+        <div class="otext">
+            <div class="user">${username}</div>
+            <div class="ctn ${strVal}">${text}</div>
+        </div>`;
+      var str = document.createElement("div");
+      str.className = `line-value ${strVal}`;
+      if(state){
+        str.innerHTML = oimg + otext;
+      }else{
+        str.innerHTML = otext + oimg; 
+      }
+      viewBox.appendChild(str);
+    }
 
-    	// line-value
-    	// msg     state-> 0:leave , 1:enter
-    	function lineMsg(state, username){
-    		var str = `
-					<div class="line-value">
-						<div class="msg"> - ${username} ${state?"enters":"leaves"} the chat room. - </div>
-					</div>`;
-				viewBox.innerHTML += str;
-    	}
-    	// userText 		state-> 0:right , 1:left
-    	function lineUserText(state, username, text){
-    		var strVal = state?"left":"right"; 
-    		var oimg  = `<div class="img"><img src="images/1.jpg" width="40" height="40" alt="icon"></div>`;
-    		var otext = `
-    			<div class="otext">
-						<div class="user">${username}</div>
-						<div class="ctn ${strVal}">${text}</div>
-					</div>`;
-    		var str = document.createElement("div");
-    		str.className = `line-value ${strVal}`;
-    		if(state){
-    			str.innerHTML = oimg + otext;
-    		}else{
-    			str.innerHTML = otext + oimg; 
-    		}
-				viewBox.appendChild(str);
-    	}
+    loginBtn.addEventListener("click", ()=>{
+      if( iclick ) return;
+      iclick = true;
+      if( !oname.value.trim() ){
+        showMsg("用户名不能为空！");
+        return;
+      }
+      oBox.classList.add("off");
+      setTimeout(function() {
+        chatBox.classList.add("show");
+      }, 1600);
+      setTimeout(function(){
+        oBox.parentNode.removeChild(oBox);
+      }, 2000);
+      showMsg("登录成功！");
 
-    	loginBtn.addEventListener("click", ()=>{
-    		if( iclick ) return;
-    		iclick = true;
-    		if( !oname.value.trim() ){
-    			showMsg("用户名不能为空！");
-    			return;
-    		}
-    		oBox.classList.add("off");
-    		setTimeout(function() {
-    			chatBox.classList.add("show");
-    		}, 1600);
-    		setTimeout(function(){
-	    		oBox.parentNode.removeChild(oBox);
-    		}, 2000);
-    		showMsg("登录成功！");
+      // 用户信息
+      var userInfo = {
+        'userid': +new Date() + parseInt(Math.random()*100),
+        'username': oname.value
+      };
+      // 连接socket后端服务器
+      var socket = io.connect("ws://127.0.0.1:8080/");
+      // 通知用户有新用户登录
+      socket.emit("login", userInfo);
+      // 监听新用户登录
+      socket.on("login", function(o){
+        onlineCount.innerHTML = o.onlineCount;
+        lineMsg(1, o.user.username);
+      });
+      // 监听用户退出
+      socket.on("logout", function(o){
+        onlineCount.innerHTML = o.onlineCount;
+        lineMsg(0, o.logoutUser.username);
+      });
+      // 监听消息
+      socket.on("message", function(obj){
+        if( obj.username===userInfo.username ){
+          lineUserText(0, obj.username, obj.text);
+        }else{
+          lineUserText(1, obj.username, obj.text);
+        }
+      });
+      // 发送消息
+      send.addEventListener("click", function(){
+        var otext = iframe.contentDocument.documentElement.textContent;
+        // 监听用户发布的聊天内容
+        socket.emit("message", {
+          ...userInfo,
+          text: otext
+        });
+      });
 
-    		// 用户信息
-	    	var userInfo = {
-    		  'userid': +new Date() + parseInt(Math.random()*100),
-          'username': oname.value
-	    	};
-	    	// 连接socket后端服务器
-    		var socket = io.connect("ws://127.0.0.1:8080/");
-    		// 通知用户有新用户登录
-    		socket.emit("login", userInfo);
-    		// 监听新用户登录
-    		socket.on("login", function(o){
-    			onlineCount.innerHTML = o.onlineCount;
-    			lineMsg(1, o.user.username);
-    		});
-    		// 监听用户退出
-    		socket.on("logout", function(o){
-    			onlineCount.innerHTML = o.onlineCount;
-    			lineMsg(0, o.logoutUser.username);
-    		});
-    		// 监听消息
-    		socket.on("message", function(obj){
-    			if( obj.username===userInfo.username ){
-						lineUserText(0, obj.username, obj.text);
-    			}else{
-						lineUserText(1, obj.username, obj.text);
-    			}
-    		});
-    		// 发送消息
-    		send.addEventListener("click", function(){
-	    		var otext = iframe.contentDocument.documentElement.textContent;
-    		  // 监听用户发布的聊天内容
-			    socket.emit("message", {
-			    	...userInfo,
-			    	text: otext
-			    });
-	    	});
-
-    		iclick = false;
-    	});
-    	
-    </script>
+      iclick = false;
+    });
+	  
+</script>
 </body>
 </html>

@@ -99,6 +99,8 @@
       viewBox.appendChild(str);
     }
 
+    // 连接socket后端服务器
+    var socket = io.connect("ws://127.0.0.1:8080/");
     loginBtn.addEventListener("click", ()=>{
       if( iclick ) return;
       iclick = true;
@@ -120,8 +122,6 @@
         'userid': +new Date() + parseInt(Math.random()*100),
         'username': oname.value
       };
-      // 连接socket后端服务器
-      var socket = io.connect("ws://127.0.0.1:8080/");
       // 通知用户有新用户登录
       socket.emit("login", userInfo);
       // 监听新用户登录

@@ -1,0 +1,231 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>聊天室</title>
+  <meta name="keywords" content="socket.io online-chat">
+  <meta name="description" content="在线聊天室">
+  <meta name="author" content="Neil-YQ">
+	<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+	<script>
+		document.getElementsByTagName("html")[0].style.fontSize = document.documentElement.clientWidth/10+"px";
+	</script>
+  <style>
+    body{font-family: "Microsoft YaHei",serif;}
+    body,dl,dd,p,h1,h2,h3,h4,h5,h6{margin:0;}
+    ol,ul,li{margin:0;padding:0;list-style:none;}
+    img{border:none;}
+	</style>
+	<link rel="stylesheet" type="text/css" href="css/chat.css">
+</head>
+<body>
+		<!-- login-box start -->
+		<div class="login-box">
+			<h3>Chat-Room v1.0</h3>
+			<div><input class="username" type="text" name="loginname" placeholder="请输入用户名！"></div>
+			<div id="login">enter</div>
+		</div>
+		<!-- login-box end -->
+
+		<!-- chat-box start -->
+		<div class="chat-box">
+
+			<!-- message start -->
+			<div class="message">
+				在线人数：<span class="online-count">0</span>
+				<span id="menu"></span>
+				<div class="mask off"></div>
+				<div class="menu-list off">
+					<ul>
+						<!-- <li>test</li> -->
+					</ul>
+				</div>
+			</div>
+			<!-- message end -->
+
+			<!-- line-value start -->
+			<div class="view-box">
+				<div class="view-content-box">
+					<div class="view-content"></div>
+				</div>
+				<!-- <div class="scroll-box"><span id="scroll-bar"></span></div> -->
+			</div>
+			<!-- line-value end -->
+
+			<!-- control-box start -->
+			<div class="control-box">
+				<div class="input-content"><iframe id="content" scrolling="no"></iframe></div>
+				<div id="send">发送</div>
+			</div>
+			<!-- control-box end -->
+			
+		</div>
+		<!-- chat-box end -->
+
+		<script src="js/socket.io.js"></script>
+    <script>
+			var iclick = false;
+			var oBox = document.getElementsByClassName("login-box")[0],
+			    loginBtn = document.querySelector("#login"),
+			    oname = document.querySelector("input.username"),
+			    iframe = document.getElementById("content"),
+			    chatBox = document.getElementsByClassName("chat-box")[0],
+			    onlineCount = document.getElementsByClassName('online-count')[0],
+			    menu = document.getElementById('menu'),
+			    menuList = document.querySelector('.message .menu-list'),
+			    menulistUl = document.querySelector('.message .menu-list ul'),
+			    mask = document.querySelector('.message .mask'),
+			    viewBox = document.getElementsByClassName('view-box')[0],
+			    viewContentBox = document.getElementsByClassName('view-content-box')[0],
+			    viewContent = document.getElementsByClassName('view-content')[0],
+			    scrollBox = document.getElementsByClassName('scroll-box')[0],
+			    scrollBar = document.getElementById("scroll-bar"),
+			    osend = document.getElementById('send');
+			var doc = iframe.contentDocument;
+			doc.designMode = "on"; 
+
+			// 提示
+			function showMsg(str) {
+			  var msg = document.createElement("div");
+			  msg.className = "showMsg";
+			  msg.innerHTML = str || "测试？";
+			  document.body.appendChild(msg);
+			  setTimeout(function () {
+			    document.body.removeChild(msg);
+			    iclick = false;
+			  }, 2000);
+			} 
+			// online-user
+			function showOnlineUser(o) {
+			  menulistUl.innerHTML = "";
+			  for (var item in o.onlineUser) {
+			    var oLi = document.createElement("li");
+			    oLi.innerHTML = o.onlineUser[item];
+			    menulistUl.appendChild(oLi);
+			  }
+			} 
+			// line-value
+			// time
+      function showTime(){
+        var str = "<div class=\"line-value\"><div class=\"msg\">" + new Date().toLocaleDateString().replace("/", "-").replace("/", "-") +" "+ new Date().toTimeString().split(" ")[0] + "</div></div>";
+        viewContent.innerHTML += str;
+      }
+			// msg     state-> 0:leave , 1:enter
+			function showlineMsg(state, username) {
+			  var str = "<div class=\"line-value\"><div class=\"msg\"> - ".concat(username, " ").concat(state ? "enters" : "leaves", " the chat room. - </div></div>");
+			  viewContent.innerHTML += str;
+			} 
+			// userText 		state-> 0:right , 1:left
+			function showlineUserText(state, username, text) {
+			  var strVal = state ? "left" : "right";
+			  var oimg = "<div class=\"img\"><img src=\"images/1.jpg\" width=\"40\" height=\"40\" alt=\"icon\"></div>";
+			  var otext = "<div class=\"otext\"><div class=\"user\">".concat(username, "</div><div class=\"ctn ").concat(strVal, "\">").concat(text, "</div></div>");
+			  var str = document.createElement("div");
+			  str.className = "line-value ".concat(strVal);
+			  str.innerHTML = state ? (oimg+otext) : (otext+oimg);
+			  viewContent.appendChild(str);
+			} 
+
+			// 事件类型确认
+			var regTest = /iphone|iPad|iPod|iOS|Android/i.test(window.navigator.userAgent);
+			var evType = regTest ? "touchstart" : "click";
+			
+			// 时间
+			var oTime = +new Date();
+			var overTime = 60;		
+
+		  // 连接socket后端服务器
+		  var socket = io.connect("ws://127.0.0.1:8080"); 
+		 
+			// 登录
+			loginBtn["on"+evType] = function () {
+			  if (iclick) return;
+			  iclick = true;
+
+			  if (!oname.value.trim()) {
+			    showMsg("用户名不能为空！");
+			    return;
+			  }
+
+			  oBox.classList.add("off");
+			  setTimeout(function () {
+			    chatBox.classList.add("show");
+			  }, 1600);
+			  setTimeout(function () {
+			    oBox.parentNode.removeChild(oBox);
+			  }, 2000);
+			  loginBtn["on"+evType] = null;
+			  showMsg("登录成功！"); 
+
+			  // 用户信息
+			  var userInfo = {
+			    userid: +new Date() + parseInt(Math.random() * 100),
+			    username: oname.value
+			  };
+
+			  // 通知用户有新用户登录
+			  socket.emit("login", userInfo); 
+			  // 监听新用户登录
+			  socket.on("login", function (o) {
+			    onlineCount.innerHTML = o.onlineCount;
+			    showlineMsg(1, o.user.username);
+			    showOnlineUser(o);
+			    viewBox.scrollTop = viewContent.offsetHeight;
+			  }); 
+			  // 监听用户退出
+			  socket.on("logout", function (o) {
+			    onlineCount.innerHTML = o.onlineCount;
+			    showlineMsg(0, o.logoutUser.username);
+			    showOnlineUser(o);
+			    viewBox.scrollTop = viewContent.offsetHeight;
+			  }); 
+
+			  // 监听消息
+			  socket.on("message", function (obj) {
+			    showlineUserText(obj.userid === userInfo.userid ? 0 : 1, obj.username, obj.text);
+			 		viewBox.scrollTop = viewContent.offsetHeight;
+			  }); // 发送消息
+
+			  send.addEventListener("click", function () {
+			    var otext = iframe.contentDocument.documentElement.textContent;
+			    if(!otext.trim()){
+			    	showMsg("输入为空！");
+			    	return;
+			    } 
+			    // 监听用户发布的聊天内容
+			    socket.emit("message", { 
+			    	userid: userInfo.userid,
+			    	username: userInfo.username,
+			      text: otext
+			    });
+			  });
+			  iclick = false;
+			}
+
+			// 用户列表
+			menu["on"+evType] = function () {
+			  menuList.classList.toggle("off");
+			  mask.classList.toggle("off");
+			}
+			mask["on"+evType] = function () {
+			  menuList.classList.add("off");
+			  mask.classList.add("off");
+			}
+
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

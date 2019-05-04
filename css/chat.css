@@ -7,7 +7,7 @@
 	width: 120px;
 	height: 40px;
 	margin-left: -60px;
-	background-color: rgba(0,0,0,.3);
+	background-color: rgba(0,0,0,.6);
 	border-radius: 3px;
 	color: #fff;
 	font-size: 12px;
@@ -93,14 +93,65 @@
 	transform: scale(1);
 }
 
-.message{
-	width: 100%;
+.chat-box .message{
+	width: calc(100% - 20px);
 	height: 24px;
 	padding: 0 10px;
-	background-color: rgba(0,0,0,.3);
+	background-color: rgba(0,0,0,.6);
 	color: #fff;
 	font-size: 12px;
 	line-height: 24px;
+}
+.chat-box .message #menu{
+	float: right;
+	display: block;
+	width: 24px;
+	height:24px;
+	background: linear-gradient(to bottom, transparent 20%, #fff 20%, #fff 35%, transparent 40%, transparent 60%, #fff 60%, #fff 75%, transparent 75%);
+	transition: .3s;
+	cursor: pointer;
+}
+.chat-box .message #menu:hover{
+	background-color: rgba(255,255,255,.12);
+}
+.chat-box .message .mask{
+	display: block;
+	position: fixed;
+	z-index: 5;
+	top:24px;
+	left: 0;
+	width: 100%;
+	height: calc(100% - 24px);
+	background-color: rgba(255,255,255,.3);
+}
+.chat-box .message .mask.off{
+	display: none;
+}
+.chat-box .message .menu-list{
+	position: fixed;
+	z-index: 10;
+	top:24px;
+	left: 0;
+	width: 40%;
+	min-width: 100px;
+	max-width: 250px;
+	height: calc(100% - 24px);
+	border-top: 1px solid #f5f5f5;
+	background-color: rgba(0,0,0,.6);
+	transition: .3s .3s;
+}
+.chat-box .message .menu-list.off{
+	left: -42%;
+}
+.chat-box .message .menu-list li{
+	height:30px;
+	line-height: 30px;
+	padding-left: 15px;
+	border-bottom: 1px dashed #ccc;
+	transition: .3s .3s;
+}
+.chat-box .message .menu-list li:hover{
+	background-color: rgba(0,0,0,.1);
 }
 
 .chat-box .control-box{
@@ -144,11 +195,16 @@
 }
 
 .chat-box .view-box{
-	height: 100%;
+	height: calc(100% - 84px);
 	padding: 0 5px;
 	font-size: 0;
 	align-content: center;
+	overflow-y: auto;
 }
+.chat-box .view-box .view-content-box{
+	height:100%;
+}
+
 .chat-box .view-box .line-value.left{
 	text-align: left;
 }
@@ -174,6 +230,7 @@
 	overflow: hidden;
 }
 .line-value .otext{
+	max-width: calc(100% - 80px);
 	margin-top:10px;
 	vertical-align: top;
 }
@@ -188,6 +245,7 @@
 	padding: 10px;
 	border-radius: 6px;
 	background-color: #88b9dd;
+	text-align: left;
 	vertical-align:top;
 }
 .line-value .ctn::after{
